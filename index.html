@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>게임 버전 트래커</title>
+<title>보보 게임 버전 트래커</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -211,6 +211,42 @@
   }
   .sug-btn:hover { background: var(--bg3); }
 
+  /* ── 아이콘 ── */
+  .game-icon { width: 22px; height: 22px; border-radius: 5px; object-fit: cover; flex-shrink: 0; }
+  .game-icon-lg { width: 32px; height: 32px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
+  .tab-icon { width: 18px; height: 18px; border-radius: 4px; object-fit: cover; vertical-align: middle; margin-right: 5px; }
+
+  /* ── 갠트 타임라인 ── */
+  .gantt-wrap {
+    background: var(--bg);
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+  .gantt-title { font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 16px; letter-spacing: 0.04em; }
+  .gantt-scroll { overflow-x: auto; }
+  .gantt-inner { min-width: 600px; position: relative; }
+  .gantt-header { display: flex; margin-bottom: 6px; padding-left: 36px; }
+  .gantt-month { font-size: 11px; color: var(--text3); font-weight: 600; position: absolute; }
+  .gantt-today-label { font-size: 10px; font-weight: 600; color: #e55; position: absolute; transform: translateX(-50%); top: 0; white-space: nowrap; }
+  .gantt-rows { position: relative; }
+  .gantt-row { display: flex; align-items: center; height: 36px; margin-bottom: 6px; position: relative; }
+  .gantt-icon-cell { width: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .gantt-track { flex: 1; height: 28px; position: relative; background: var(--bg3); border-radius: 6px; overflow: visible; }
+  .gantt-bar {
+    position: absolute; height: 100%; border-radius: 6px;
+    display: flex; align-items: center; overflow: hidden;
+    cursor: default; transition: opacity 0.15s;
+  }
+  .gantt-bar:hover { opacity: 0.85; }
+  .gantt-bar-label { font-size: 11px; font-weight: 600; padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .gantt-phase-line { position: absolute; top: 0; bottom: 0; width: 1.5px; background: rgba(255,255,255,0.5); pointer-events: none; }
+  .gantt-today-line { position: absolute; top: -4px; bottom: -4px; width: 2px; background: #e55; border-radius: 1px; pointer-events: none; z-index: 10; }
+  .gantt-date-ticks { padding-left: 36px; position: relative; height: 18px; margin-top: 4px; }
+  .gantt-tick { position: absolute; font-size: 10px; color: var(--text3); transform: translateX(-50%); }
+
   /* ── 타임라인 ── */
   .tl-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
   .tl-accent-bar { width: 4px; height: 22px; border-radius: 2px; }
@@ -269,10 +305,10 @@
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTyz6c92R-LC6sF8uNb5HPpHkZsjkHZXJoO6J8kmyjR84hAzrOyiX-bUmuPRJhXVSbUk8-TOm8FFM0p/pub?gid=0&single=true&output=csv';
 
 const GAME_CONFIG = {
-  '원신':     { id:'genshin',   a:'#BA7517', b:'#FEF3E0', m:'#FAC775', p:'#633806' },
-  '명조':     { id:'wuwa',      a:'#0F6E56', b:'#E1F5EE', m:'#9FE1CB', p:'#085041' },
-  '붕스':     { id:'starrail',  a:'#534AB7', b:'#EEEDFE', m:'#CECBF6', p:'#3C3489' },
-  '엔드필드': { id:'endfield',  a:'#185FA5', b:'#E6F1FB', m:'#B5D4F4', p:'#0C447C' },
+  '원신':     { id:'genshin',   a:'#BA7517', b:'#FEF3E0', m:'#FAC775', p:'#633806', icon:'icon-genshin.png' },
+  '명조':     { id:'wuwa',      a:'#0F6E56', b:'#E1F5EE', m:'#9FE1CB', p:'#085041', icon:'icon-wuwa.png' },
+  '붕스':     { id:'starrail',  a:'#534AB7', b:'#EEEDFE', m:'#CECBF6', p:'#3C3489', icon:'icon-starrail.png' },
+  '엔드필드': { id:'endfield',  a:'#185FA5', b:'#E6F1FB', m:'#B5D4F4', p:'#0C447C', icon:'icon-endfield.png' },
 };
 const GAME_ORDER = ['원신', '붕스', '명조', '엔드필드'];
 
@@ -413,14 +449,97 @@ function renderVersionCard(gameName, v, showNext, nxt) {
   }
 
   return `<div class="vcard" style="--ga:${c.a};--gb:${c.b};--gm:${c.m};--gp:${c.p};">
-    <p class="vc-game">${gameName}</p>
-    <p class="vc-ver">${v.v}버전</p>
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:4px;">
+      <img src="${c.icon}" class="game-icon-lg" onerror="this.style.display='none'">
+      <div><p class="vc-game">${gameName}</p><p class="vc-ver">${v.v}버전</p></div>
+    </div>
     <p class="vc-dates">(${fmt(s)} – ${fmt(e)})</p>
     ${phSection('전반', info.half === '전반', f1cd, fnA, frA)}
     <div class="card-divider"></div>
     ${phSection('후반', info.half === '후반', f2cd, hnA, hrA)}
     ${v.memo ? `<div style="margin-top:10px;"><span class="tag-memo">${v.memo}</span></div>` : ''}
     ${nxtHtml}
+  </div>`;
+}
+
+// ── 갠트 타임라인 ─────────────────────────────────────
+function renderGantt() {
+  const rangeStart = addDays(TODAY, -30);
+  const rangeEnd   = addDays(TODAY, 80);
+  const totalMs    = rangeEnd - rangeStart;
+
+  function pct(d) {
+    if (!d) return null;
+    const p = (d - rangeStart) / totalMs * 100;
+    return Math.max(-5, Math.min(105, p));
+  }
+
+  const todayPct = pct(TODAY);
+
+  const months = [];
+  let mc = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), 1);
+  while (mc <= rangeEnd) {
+    const p = pct(mc);
+    if (p >= 0 && p <= 100) months.push({ label: `${mc.getMonth()+1}월`, pct: p });
+    mc = new Date(mc.getFullYear(), mc.getMonth()+1, 1);
+  }
+
+  const ticks = [];
+  for (let d = new Date(rangeStart); d <= rangeEnd; d = addDays(d, 14)) {
+    ticks.push({ label: `${d.getMonth()+1}/${d.getDate()}`, pct: pct(d) });
+  }
+
+  const rows = GAME_ORDER.filter(n => GAMES[n]).map(name => {
+    const c = GAME_CONFIG[name];
+    const bars = GAMES[name].map(v => {
+      const s = pd(v.s), e = pd(v.e);
+      if (!s || !e) return '';
+      const left = pct(s), right = pct(e);
+      const width = right - left;
+      if (width <= 0.5) return '';
+      const info = getPhase(v);
+      const isPast = info.st === 'past';
+      const isCur  = info.st === 'current';
+      const mid = info.mid || addDays(s, 21);
+      const midInBar = Math.min(100, Math.max(0, (mid - s) / (e - s) * 100));
+      const bg = isPast ? `${c.a}66` : c.a;
+      return `<div class="gantt-bar" style="left:${left}%;width:${width}%;background:${bg};" title="${v.v}버전 ${fmt(s)}~${fmt(e)}">
+        <div class="gantt-phase-line" style="left:${midInBar}%;"></div>
+        <span class="gantt-bar-label" style="color:${c.b};">${v.v}버전</span>
+        ${isCur ? `<span style="position:absolute;right:5px;font-size:9px;font-weight:700;color:${c.b};">▶</span>` : ''}
+      </div>`;
+    }).join('');
+
+    return `<div class="gantt-row">
+      <div class="gantt-icon-cell">
+        <img src="${c.icon}" class="game-icon" title="${name}" onerror="this.style.display='none'">
+      </div>
+      <div class="gantt-track">
+        ${bars}
+        <div class="gantt-today-line" style="left:${todayPct}%;"></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const monthHtml = months.map(m =>
+    `<span class="gantt-month" style="left:calc(36px + ${m.pct}%)">${m.label}</span>`
+  ).join('');
+  const tickHtml = ticks.map(t =>
+    `<span class="gantt-tick" style="left:${t.pct}%;">${t.label}</span>`
+  ).join('');
+
+  return `<div class="gantt-wrap">
+    <p class="gantt-title">버전 일정 타임라인 · ${(TODAY.getMonth()+1)}월 ${TODAY.getDate()}일 기준</p>
+    <div class="gantt-scroll"><div class="gantt-inner">
+      <div style="position:relative;height:18px;padding-left:36px;margin-bottom:2px;">${monthHtml}</div>
+      <div class="gantt-rows">${rows}</div>
+      <div class="gantt-date-ticks">${tickHtml}</div>
+    </div></div>
+    <div style="display:flex;gap:14px;margin-top:10px;flex-wrap:wrap;align-items:center;">
+      <div style="display:flex;align-items:center;gap:5px;"><div style="width:14px;height:2px;background:#e55;border-radius:1px;"></div><span style="font-size:11px;color:var(--text3);">오늘</span></div>
+      <div style="display:flex;align-items:center;gap:5px;"><div style="width:14px;height:10px;border-radius:2px;background:#aaa;opacity:0.4;"></div><span style="font-size:11px;color:var(--text3);">종료된 버전</span></div>
+      <span style="font-size:11px;color:var(--text3);">점선 = 전반/후반 구분</span>
+    </div>
   </div>`;
 }
 
@@ -550,8 +669,7 @@ let curTab = 'main';
 const subStates = {};
 
 function renderMain() {
-  const today = TODAY;
-  const dateStr = `${today.getMonth()+1}월 ${today.getDate()}일`;
+  const dateStr = `${TODAY.getMonth()+1}월 ${TODAY.getDate()}일`;
   const cards = GAME_ORDER
     .filter(name => GAMES[name])
     .map(name => {
@@ -561,7 +679,8 @@ function renderMain() {
       if (!cur) return '';
       return renderVersionCard(name, cur, true, vs[ci+1]);
     }).join('');
-  return `<p class="section-label">오늘(${dateStr}) 기준 진행 중인 버전</p>
+  return `${renderGantt()}
+    <p class="section-label">오늘(${dateStr}) 기준 진행 중인 버전</p>
     <div class="main-grid">${cards}</div>
     <div class="legend">
       <span style="font-size:11px;color:var(--text3);">색상 구분 —</span>
@@ -625,13 +744,14 @@ function render() {
   const mainEl = document.getElementById('main');
   const tabsEl = document.getElementById('tabs');
 
-  const tabDefs = [['main', '메인'], ...GAME_ORDER.filter(n => GAMES[n]).map(n => [n, n])];
-  tabsEl.innerHTML = tabDefs.map(([id, lbl]) => {
+  const tabDefs = [['main', '메인', null], ...GAME_ORDER.filter(n => GAMES[n]).map(n => [n, n, GAME_CONFIG[n].icon])];
+  tabsEl.innerHTML = tabDefs.map(([id, lbl, icon]) => {
     const c = GAME_CONFIG[id];
     const isActive = curTab === id;
     const ac = c ? c.a : 'var(--text)';
+    const iconHtml = icon ? `<img src="${icon}" class="tab-icon" onerror="this.style.display='none'">` : '';
     return `<button class="tab-btn${isActive ? ' active' : ''}" onclick="sw('${id}')"
-      style="color:${isActive ? ac : 'var(--text2)'};border-bottom-color:${isActive ? ac : 'transparent'};">${lbl}</button>`;
+      style="color:${isActive ? ac : 'var(--text2)'};border-bottom-color:${isActive ? ac : 'transparent'};">${iconHtml}${lbl}</button>`;
   }).join('');
 
   if (curTab === 'main') {
