@@ -266,7 +266,7 @@
 
 <script>
 // ── 설정 ──────────────────────────────────────────────
-const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTyz6c92R-LC6sF8uNb5HPpHkZsjkHZXJoO6J8kmyjR84hAzrOyiX-bUmuPRJhXVSbUk8-TOm8FFM0p/pub?output=csv';
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTyz6c92R-LC6sF8uNb5HPpHkZsjkHZXJoO6J8kmyjR84hAzrOyiX-bUmuPRJhXVSbUk8-TOm8FFM0p/pub?gid=0&single=true&output=csv';
 
 const GAME_CONFIG = {
   '원신':     { id:'genshin',   a:'#BA7517', b:'#FEF3E0', m:'#FAC775', p:'#633806' },
@@ -282,10 +282,16 @@ TODAY.setHours(0,0,0,0);
 
 function pd(s) {
   if (!s) return null;
-  const clean = s.replace(/\./g, '/').trim();
-  const [y, m, d] = clean.split('/');
-  if (!y || !m || !d) return null;
-  return new Date(+y, +m - 1, +d);
+  s = s.trim();
+  if (!s) return null;
+  if (/^\d{8}$/.test(s)) return new Date(+s.slice(0,4), +s.slice(4,6)-1, +s.slice(6,8));
+  const clean = s.replace(/[.\-]/g, '/').replace(/\s+/g, '').replace(/\/$/, '');
+  const parts = clean.split('/').map(p => parseInt(p, 10));
+  if (parts.length === 3 && parts.every(p => !isNaN(p))) {
+    if (parts[0] > 1900) return new Date(parts[0], parts[1]-1, parts[2]);
+    if (parts[2] > 1900) return new Date(parts[2], parts[0]-1, parts[1]);
+  }
+  return null;
 }
 function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
 function fmt(d) { if (!d) return '?'; return `${d.getMonth()+1}/${String(d.getDate()).padStart(2,'0')}`; }
@@ -303,6 +309,8 @@ function getPhase(v) {
 
 // ── CSV 파싱 ──────────────────────────────────────────
 function parseCSV(text) {
+  // BOM 제거
+  text = text.replace(/^\uFEFF/, '');
   const rows = [];
   let cur = '', inQ = false, row = [];
   for (let i = 0; i < text.length; i++) {
@@ -328,25 +336,43 @@ function parseCSV(text) {
 function buildGameData(rows) {
   const games = {};
   let curGame = null;
+  // 헤더 행 컬럼 인덱스 동적 감지
+  let colIdx = { g:0, ver:1, s:2, e:3, fn:4, fr:5, hn:6, hr:7, memo:8 };
 
   rows.forEach(row => {
-    const [g, ver, s, e, fn, fr, hn, hr, memo] = row;
-    // 헤더 행 스킵
-    if (ver === '버전' || ver === '시작 날짜') return;
-    // 게임명 행
-    if (g && GAME_CONFIG[g]) { curGame = g; }
+    // 헤더 행 감지 (버전 or 구분 포함)
+    if (row[1] === '버전' || row[0] === '구분') {
+      // 컬럼 위치 재감지
+      row.forEach((cell, i) => {
+        if (cell === '구분') colIdx.g = i;
+        if (cell === '버전') colIdx.ver = i;
+        if (cell === '시작 날짜') colIdx.s = i;
+        if (cell === '종료 날짜') colIdx.e = i;
+        if (cell === '전반_신규') colIdx.fn = i;
+        if (cell === '전반_복각') colIdx.fr = i;
+        if (cell === '후반_신규') colIdx.hn = i;
+        if (cell === '후반_복각') colIdx.hr = i;
+        if (cell === '메모') colIdx.memo = i;
+      });
+      return;
+    }
+
+    const g   = (row[colIdx.g]   || '').trim();
+    const ver = (row[colIdx.ver] || '').trim();
+    const s   = (row[colIdx.s]   || '').trim();
+    const e   = (row[colIdx.e]   || '').trim();
+    const fn  = (row[colIdx.fn]  || '').trim();
+    const fr  = (row[colIdx.fr]  || '').trim();
+    const hn  = (row[colIdx.hn]  || '').trim();
+    const hr  = (row[colIdx.hr]  || '').trim();
+    const memo= (row[colIdx.memo]|| '').trim();
+
+    if (g && GAME_CONFIG[g]) curGame = g;
     if (!curGame) return;
     if (!ver || !s) return;
 
     if (!games[curGame]) games[curGame] = [];
-    games[curGame].push({
-      v: ver,
-      s: s.replace(/\./g, '/'),
-      e: e ? e.replace(/\./g, '/') : '',
-      fn: fn || '', fr: fr || '',
-      hn: hn || '', hr: hr || '',
-      memo: memo || ''
-    });
+    games[curGame].push({ v: ver, s, e, fn, fr, hn, hr, memo });
   });
   return games;
 }
